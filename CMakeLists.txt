@@ -30,6 +30,6 @@ add_executable (app ${main_src})
 if (MSVC)
     target_link_libraries (app PRIVATE glfw vulkan-1.lib)
 else()
-    target_link_libraries (app GL glfw GLEW IrrKlang)
+    target_link_libraries (app GL glfw GLEW vulkan)
 endif()
 

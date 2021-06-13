@@ -1,7 +1,12 @@
-#define VK_USE_PLATFORM_WIN32_KHR
+#ifdef WIN32
+    #define VK_USE_PLATFORM_WIN32_KHR
+#endif
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
+
+#ifdef WIN32
+    #define GLFW_EXPOSE_NATIVE_WIN32
+#endif
 #include <GLFW/glfw3native.h>
 
 #include <vector>
@@ -102,8 +107,9 @@ private:
 
         QueueFamilyIndices indices = findQueueFamilies( device );
 
-        return indices.isComplete()                                                 &&
-               deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU  &&
+        return indices.isComplete()                                                  &&
+               (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU ||
+                deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
                deviceFeatures.geometryShader;
     }
 
