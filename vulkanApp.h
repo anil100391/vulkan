@@ -13,16 +13,16 @@
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-class HelloTriangleApp
+class VulkanApp
 {
 public:
 
-    HelloTriangleApp() = default;
-    virtual ~HelloTriangleApp() = default;
+    VulkanApp() = default;
+    virtual ~VulkanApp() = default;
 
     void run();
 
-private:
+protected:
 
     struct QueueFamilyIndices;
     struct SwapChainSupportDetails;

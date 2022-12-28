@@ -1,13 +1,12 @@
 #include <iostream>
 
-#include "helloTria.h"
+#include "vulkanApp.h"
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 int main()
 {
-
-    HelloTriangleApp app;
+    VulkanApp app;
 
     try
     {
