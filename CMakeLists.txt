@@ -31,10 +31,13 @@ add_compile_options(-DNOMINMAX)
 add_compile_options(-D_USE_MATH_DEFINES)
 
 add_executable (app ${main_src})
+add_executable (fractals "vulkanApp.cpp" "demos/fractals.cpp")
 
 if (MSVC)
     target_link_libraries (app PRIVATE glfw vulkan-1.lib)
+    target_link_libraries (fractals PRIVATE glfw vulkan-1.lib)
 else()
     target_link_libraries (app GL glfw GLEW vulkan)
+    target_link_libraries (fractals GL glfw GLEW vulkan)
 endif()
 

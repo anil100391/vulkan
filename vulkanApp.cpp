@@ -146,7 +146,8 @@ void VulkanApp::initWindow()
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint( GLFW_RESIZABLE, GLFW_TRUE );
-    _window = glfwCreateWindow(1024, 1024, "Vulkan", nullptr, nullptr);
+    auto wp = GetWindowParams();
+    _window = glfwCreateWindow(wp.width, wp.height, wp.title.c_str(), nullptr, nullptr);
 }
 
 // -----------------------------------------------------------------------------

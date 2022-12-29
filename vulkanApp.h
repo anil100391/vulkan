@@ -13,12 +13,23 @@
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
+struct WindowParams
+{
+    uint32_t width{ 1024 };
+    uint32_t height{ 1024 };
+    std::string title{ "Vulkan App" };
+};
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 class VulkanApp
 {
 public:
 
     VulkanApp() = default;
     virtual ~VulkanApp() = default;
+
+    virtual WindowParams GetWindowParams() const;
 
     void run();
 
@@ -121,3 +132,10 @@ protected:
     std::vector<VkFence>            _imagesInFlight;
     size_t                          _currentFrame = 0;
 };
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+inline WindowParams VulkanApp::GetWindowParams() const
+{
+    return WindowParams{};
+}
