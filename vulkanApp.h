@@ -45,7 +45,13 @@ protected:
     void                        createSyncObjects();
     void                        createCommandBuffers();
     void                        createCommandPool(VkPhysicalDevice physicalDevice);
+    void                        createBuffer( VkDeviceSize size,
+                                              VkBufferUsageFlags usage,
+                                              VkMemoryPropertyFlags properties,
+                                              VkBuffer &buffer,
+                                              VkDeviceMemory &bufferMemory );
     void                        createVertexBuffer();
+    void                        copyBuffer( VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size );
     void                        createFrameBuffers();
     void                        createGraphicsPipeline();
     void                        createImageViews();
