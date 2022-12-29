@@ -5,16 +5,19 @@ set (CMAKE_CXX_STANDARD 17)
 # for youcompleteme to work
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Vulkan REQUIRED)
+if (MSVC)
+    include_directories ("C:/VulkanSDK/1.3.236.0/Include")
+    link_directories ("C:/VulkanSDK/1.3.236.0/Lib")
+else()
+    find_package(Vulkan REQUIRED)
+endif()
+
 find_package(glfw3 CONFIG REQUIRED)
 
 # include_directories ("${PROJECT_SOURCE_DIR}/vendor/imgui")
 include_directories ("${PROJECT_SOURCE_DIR}/vendor/glm")
 # include_directories ("${PROJECT_SOURCE_DIR}/vendor/stb_image")
 # include_directories ("${PROJECT_SOURCE_DIR}/vendor/irrKlang/include")
-
-include_directories ("C:/VulkanSDK/1.2.170.0/Include")
-link_directories ("C:/VulkanSDK/1.2.170.0/Lib")
 
 include_directories ("${PROJECT_SOURCE_DIR}/vendor/glm")
 
