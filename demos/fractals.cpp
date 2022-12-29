@@ -59,10 +59,10 @@ const
     }
 
     double pixelSpan = (p_xMax - p_xMin) / (p_resX - 1);
-    px = (x - p_xMin) / pixelSpan;
+    px = static_cast<int>((x - p_xMin) / pixelSpan);
 
     pixelSpan = (p_yMax - p_yMin) / (p_resY - 1);
-    py = (y - p_yMin) / pixelSpan;
+    py = static_cast<int>((y - p_yMin) / pixelSpan);
 
     return true;
 }
@@ -219,6 +219,13 @@ FractalsApp::FractalsApp()
     _fractal = std::make_unique<nhNebulabrot>( -2.0f, 1.0f, -1.0f, 1.0f, width, height, maxIter, minIter );
 
     StartPainting();
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+FractalsApp::~FractalsApp()
+{
+    PausePainting();
 }
 
 // -----------------------------------------------------------------------------

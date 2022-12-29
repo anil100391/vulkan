@@ -111,7 +111,7 @@ class FractalsApp : public VulkanApp
 public:
 
     FractalsApp();
-    virtual ~FractalsApp() = default;
+    virtual ~FractalsApp();
 
     virtual WindowParams GetWindowParams() const override;
 
