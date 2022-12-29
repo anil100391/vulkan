@@ -16,6 +16,8 @@ include_directories ("${PROJECT_SOURCE_DIR}/vendor/glm")
 include_directories ("C:/VulkanSDK/1.2.170.0/Include")
 link_directories ("C:/VulkanSDK/1.2.170.0/Lib")
 
+include_directories ("${PROJECT_SOURCE_DIR}/vendor/glm")
+
 # file (GLOB utils_src "${PROJECT_SOURCE_DIR}/utils/*.cpp" )
 file (GLOB main_src "${PROJECT_SOURCE_DIR}/*.cpp" )
 

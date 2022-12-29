@@ -31,7 +31,7 @@ protected:
     void                        initVulkan();
     void                        setupDebugMessenger();
     void                        createSurface();
-    VkPhysicalDevice            pickPhysicalDevice();
+    void                        pickPhysicalDevice();
     SwapChainSupportDetails     querySwapChainSupport( VkPhysicalDevice device );
     VkSurfaceFormatKHR          chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats );
     VkPresentModeKHR            chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes );
@@ -39,11 +39,13 @@ protected:
     bool                        checkDeviceExtensionSupport( VkPhysicalDevice device );
     bool                        isDeviceSuitable( VkPhysicalDevice device );
     QueueFamilyIndices          findQueueFamilies( VkPhysicalDevice device );
+    uint32_t                    findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     void                        createRenderPass();
     VkShaderModule              createShaderModule( const std::vector<char> &code );
     void                        createSyncObjects();
     void                        createCommandBuffers();
     void                        createCommandPool(VkPhysicalDevice physicalDevice);
+    void                        createVertexBuffer();
     void                        createFrameBuffers();
     void                        createGraphicsPipeline();
     void                        createImageViews();
@@ -57,10 +59,13 @@ protected:
     GLFWwindow*                     _window = nullptr;
     VkInstance                      _instance;
     VkSurfaceKHR                    _surface;
+    VkPhysicalDevice                _physicalDevice; 
     VkDevice                        _device;
     VkQueue                         _graphicsQueue;
     VkQueue                         _presentQueue;
     VkSwapchainKHR                  _swapChain;
+    VkBuffer                        _vertexBuffer;
+    VkDeviceMemory                  _vertexBufferMemory;
     std::vector<VkImage>            _swapChainImages;
     VkFormat                        _swapChainImageFormat;
     VkExtent2D                      _swapChainExtent;

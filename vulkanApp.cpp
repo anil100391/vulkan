@@ -1,10 +1,15 @@
 
 #include <set>
+#include <array>
 #include <iostream>
 #include <stdexcept>
 #include <optional>
 #include <algorithm>
 #include <fstream>
+
+#include <glm/glm.hpp>
+
+#include <cstring> // for memcpy
 
 #include "vulkanApp.h"
 
@@ -15,6 +20,48 @@ static const int MAX_FRAMES_IN_FLIGHT = 2;
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 static const std::vector<const char *> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+struct Vertex
+{
+    glm::vec2 pos;
+    glm::vec3 color;
+
+    static VkVertexInputBindingDescription getBindingDescription()
+    {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(Vertex);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+    {
+        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(Vertex, color);
+        return attributeDescriptions;
+    }
+};
+
+static const std::vector<Vertex> vertices = { {{-1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}},
+                                              {{ 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+                                              {{ 1.0f,  1.0f}, {1.0f, 1.0f, 1.0f}},
+
+                                              {{-1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}},
+                                              {{ 1.0f,  1.0f}, {1.0f, 1.0f, 1.0f}},
+                                              {{-1.0f,  1.0f}, {0.0f, 0.0f, 1.0f}}
+                                            };
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -75,7 +122,7 @@ void VulkanApp::initWindow()
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint( GLFW_RESIZABLE, GLFW_TRUE );
-    _window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
+    _window = glfwCreateWindow(1024, 1024, "Vulkan", nullptr, nullptr);
 }
 
 // -----------------------------------------------------------------------------
@@ -85,14 +132,15 @@ void VulkanApp::initVulkan()
     createInstance();
     setupDebugMessenger();
     createSurface();
-    VkPhysicalDevice physicalDevice = pickPhysicalDevice();
-    createLogicalDevice(physicalDevice);
-    createSwapChain(physicalDevice);
+    pickPhysicalDevice();
+    createLogicalDevice(_physicalDevice);
+    createSwapChain(_physicalDevice);
     createImageViews();
     createRenderPass();
     createGraphicsPipeline();
     createFrameBuffers();
-    createCommandPool(physicalDevice);
+    createCommandPool(_physicalDevice);
+    createVertexBuffer();
     createCommandBuffers();
     createSyncObjects();
 }
@@ -113,7 +161,7 @@ void VulkanApp::createSurface()
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-VkPhysicalDevice VulkanApp::pickPhysicalDevice()
+void VulkanApp::pickPhysicalDevice()
 {
     uint32_t deviceCnt = 0;
     vkEnumeratePhysicalDevices(_instance, &deviceCnt, nullptr);
@@ -139,7 +187,7 @@ VkPhysicalDevice VulkanApp::pickPhysicalDevice()
         throw std::runtime_error("failed to find a suitable GPU!");
     }
 
-    return physicalDevice;
+    _physicalDevice = physicalDevice;
 }
 
 // -------------------------------------------------------------------------
@@ -302,6 +350,24 @@ VulkanApp::QueueFamilyIndices VulkanApp::findQueueFamilies(VkPhysicalDevice devi
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
+uint32_t VulkanApp::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+    {
+        if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("failed to find suitable memory type!");
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 void VulkanApp::createRenderPass()
 {
     VkAttachmentDescription colorAttachment{};
@@ -422,7 +488,11 @@ void VulkanApp::createCommandBuffers()
 
         vkCmdBindPipeline(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
 
-        vkCmdDraw(_commandBuffers[i], 3, 1, 0, 0);
+        VkBuffer vertexBuffers[] = {_vertexBuffer};
+        VkDeviceSize offsets[] ={0};
+        vkCmdBindVertexBuffers(_commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+        vkCmdDraw(_commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
         vkCmdEndRenderPass(_commandBuffers[i]);
 
@@ -447,6 +517,42 @@ void VulkanApp::createCommandPool(VkPhysicalDevice physicalDevice)
     {
         throw std::runtime_error("failed to create command pool!");
     }
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+void VulkanApp::createVertexBuffer()
+{
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateBuffer(_device, &bufferInfo, nullptr, &_vertexBuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create vertex buffer!");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(_device, _vertexBuffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    if (vkAllocateMemory(_device, &allocInfo, nullptr, &_vertexBufferMemory) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to allocate vertex buffer memory!");
+    }
+
+    vkBindBufferMemory(_device, _vertexBuffer, _vertexBufferMemory, 0);
+
+    void* data;
+    vkMapMemory(_device, _vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+    memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+    vkUnmapMemory(_device, _vertexBufferMemory);
 }
 
 // -----------------------------------------------------------------------------
@@ -498,10 +604,15 @@ void VulkanApp::createGraphicsPipeline()
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
+    auto bindingDescription    = Vertex::getBindingDescription();
+    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -848,6 +959,8 @@ void VulkanApp::cleanup()
     }
 
     vkDestroySwapchainKHR(_device, _swapChain, nullptr);
+    vkDestroyBuffer(_device, _vertexBuffer, nullptr);
+    vkFreeMemory(_device, _vertexBufferMemory, nullptr);
     vkDestroyDevice(_device, nullptr);
     vkDestroySurfaceKHR(_instance, _surface, nullptr);
     vkDestroyInstance(_instance, nullptr);
