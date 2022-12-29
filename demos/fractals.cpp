@@ -215,7 +215,7 @@ FractalsApp::FractalsApp()
     auto height = wp.height;
 
     int minIter = 25;
-    int maxIter = 200;
+    int maxIter = 1000;
     _fractal = std::make_unique<nhNebulabrot>( -2.0f, 1.0f, -1.0f, 1.0f, width, height, maxIter, minIter );
 
     StartPainting();
