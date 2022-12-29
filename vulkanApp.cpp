@@ -166,7 +166,7 @@ void VulkanApp::initVulkan()
     createGraphicsPipeline();
     createFrameBuffers();
     createCommandPool(_physicalDevice);
-    createTextureImage();
+    createTextureImage("textures/texture.jpg");
     createTextureImageView();
     createTextureSampler();
     createVertexBuffer();
@@ -737,39 +737,7 @@ void VulkanApp::createDescriptorSets()
         throw std::runtime_error( "failed to allocate descriptor sets!" );
     }
 
-    for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
-    {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = _uniformBuffers[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof( UniformBufferObject );
-
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = _textureImageView;
-        imageInfo.sampler = _textureSampler;
-
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = _descriptorSets[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = _descriptorSets[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &imageInfo;
-
-        vkUpdateDescriptorSets( _device, static_cast<uint32_t>(descriptorWrites.size()),
-                                descriptorWrites.data(), 0, nullptr );
-    }
+    updateDescriptorSets();
 }
 
 // -----------------------------------------------------------------------------
@@ -921,10 +889,10 @@ void VulkanApp::transitionImageLayout( VkImage image, VkFormat format,
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-void VulkanApp::createTextureImage()
+void VulkanApp::createTextureImage( const std::string &texImgFile )
 {
     int texWidth, texHeight, texChannels;
-    stbi_uc *pixels = stbi_load( "textures/texture.jpg",
+    stbi_uc *pixels = stbi_load( texImgFile.c_str(),
                                  &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
     VkDeviceSize imageSize = texWidth * texHeight * 4u;
 
@@ -956,6 +924,47 @@ void VulkanApp::createTextureImage()
 
     copyBufferToImage( stagingBuffer, _textureImage,
                        static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight) );
+
+    transitionImageLayout( _textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+
+    vkDestroyBuffer( _device, stagingBuffer, nullptr );
+    vkFreeMemory( _device, stagingBufferMemory, nullptr );
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+void VulkanApp::createTextureImage( const std::vector<unsigned char> &pixels,
+                                    uint32_t width, uint32_t height )
+{
+    if ( pixels.empty() || pixels.size() != width * height * 4 )
+    {
+        throw std::runtime_error( "invalid texture data!" );
+    }
+
+    VkDeviceSize imageSize = pixels.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer( imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                  stagingBuffer, stagingBufferMemory );
+
+    void *data;
+    vkMapMemory( _device, stagingBufferMemory, 0, imageSize, 0, &data );
+    memcpy( data, pixels.data(), static_cast<size_t>(imageSize) );
+    vkUnmapMemory( _device, stagingBufferMemory );
+
+    createImage( width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory );
+
+    transitionImageLayout( _textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+                           VK_IMAGE_LAYOUT_UNDEFINED,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+
+    copyBufferToImage( stagingBuffer, _textureImage, width, height );
 
     transitionImageLayout( _textureImage, VK_FORMAT_R8G8B8A8_SRGB,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -1175,6 +1184,45 @@ VkImageView VulkanApp::createImageView( VkImage image, VkFormat format )
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
+void VulkanApp::updateDescriptorSets()
+{
+    for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
+    {
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = _uniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof( UniformBufferObject );
+
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = _textureImageView;
+        imageInfo.sampler = _textureSampler;
+
+        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = _descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = _descriptorSets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+
+        vkUpdateDescriptorSets( _device, static_cast<uint32_t>(descriptorWrites.size()),
+                                descriptorWrites.data(), 0, nullptr );
+    }
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 void VulkanApp::createImageViews()
 {
     _swapChainImageViews.resize(_swapChainImages.size());
@@ -1250,6 +1298,15 @@ void VulkanApp::createSwapChain(VkPhysicalDevice physicalDevice)
 void VulkanApp::createTextureImageView()
 {
     _textureImageView = createImageView( _textureImage, VK_FORMAT_R8G8B8A8_SRGB );
+}
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+void VulkanApp::cleanupImageTexture()
+{
+    vkDestroyImageView( _device, _textureImageView, nullptr );
+    vkDestroyImage( _device, _textureImage, nullptr );
+    vkFreeMemory( _device, _textureImageMemory, nullptr );
 }
 
 // -----------------------------------------------------------------------------
@@ -1412,7 +1469,7 @@ void VulkanApp::drawFrame()
     }
     _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
-    updateUniformBuffer( _currentFrame );
+    updateUniformBuffer( static_cast<uint32_t>(_currentFrame) );
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1491,14 +1548,15 @@ void VulkanApp::cleanup()
 
     vkDestroyDescriptorPool( _device, _descriptorPool, nullptr );
     vkDestroyDescriptorSetLayout( _device, _descriptorSetLayout, nullptr );
+
     vkDestroyBuffer( _device, _indexBuffer, nullptr );
     vkFreeMemory( _device, _indexBufferMemory, nullptr );
     vkDestroyBuffer(_device, _vertexBuffer, nullptr);
     vkFreeMemory(_device, _vertexBufferMemory, nullptr);
+
     vkDestroySampler( _device, _textureSampler, nullptr );
-    vkDestroyImageView( _device, _textureImageView, nullptr );
-    vkDestroyImage( _device, _textureImage, nullptr );
-    vkFreeMemory( _device, _textureImageMemory, nullptr );
+    cleanupImageTexture();
+
     vkDestroyDevice(_device, nullptr);
     vkDestroySurfaceKHR(_instance, _surface, nullptr);
     vkDestroyInstance(_instance, nullptr);

@@ -10,6 +10,16 @@ public:
     virtual ~FractalsApp() = default;
 
     virtual WindowParams GetWindowParams() const override;
+
+protected:
+
+    virtual void drawFrame() override;
+
+private:
+
+    void UpdatePixels( float time );
+
+    std::vector<unsigned char> p_pixels;
 };
 
 // -----------------------------------------------------------------------------

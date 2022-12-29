@@ -68,6 +68,7 @@ protected:
     void                        createUniformBuffers();
     void                        createDescriptorPool();
     void                        createDescriptorSets();
+    void                        updateDescriptorSets();
     void                        updateUniformBuffer( uint32_t currentImage );
     void                        copyBuffer( VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size );
     void                        createImage( uint32_t width, uint32_t height, VkFormat format,
@@ -79,7 +80,9 @@ protected:
                                                        VkImageLayout newLayout );
     void                        copyBufferToImage( VkBuffer buffer, VkImage image,
                                                    uint32_t width, uint32_t height );
-    void                        createTextureImage();
+    void                        createTextureImage( const std::string &texImgFile );
+    void                        createTextureImage( const std::vector<unsigned char> &pixels,
+                                                    uint32_t width, uint32_t height );
     void                        createTextureImageView();
     void                        createTextureSampler();
     void                        createFrameBuffers();
@@ -91,8 +94,9 @@ protected:
     void                        createLogicalDevice(VkPhysicalDevice physicalDevice);
     void                        createInstance();
     void                        mainLoop();
-    void                        drawFrame();
+    virtual void                drawFrame();
     void                        cleanup();
+    void                        cleanupImageTexture();
 
     GLFWwindow*                     _window = nullptr;
     VkInstance                      _instance;
