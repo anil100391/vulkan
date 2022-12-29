@@ -16,7 +16,7 @@ find_package(glfw3 CONFIG REQUIRED)
 
 # include_directories ("${PROJECT_SOURCE_DIR}/vendor/imgui")
 include_directories ("${PROJECT_SOURCE_DIR}/vendor/glm")
-# include_directories ("${PROJECT_SOURCE_DIR}/vendor/stb_image")
+include_directories ("${PROJECT_SOURCE_DIR}/vendor/stb_image")
 # include_directories ("${PROJECT_SOURCE_DIR}/vendor/irrKlang/include")
 
 include_directories ("${PROJECT_SOURCE_DIR}/vendor/glm")
