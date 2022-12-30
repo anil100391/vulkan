@@ -1,3 +1,6 @@
+#include <atomic>
+#include <vector>
+#include <thread>
 #include <cassert>
 
 #include "../vulkanApp.h"
