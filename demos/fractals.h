@@ -89,6 +89,7 @@ public:
 
     void PausePaint( bool flag ) { p_paused = flag; }
 
+    std::vector<unsigned char> GetHeatPlot() const;
 private:
 
     int IterationsToGetKnocked( int row, int col ) const;
@@ -101,7 +102,7 @@ private:
     int p_maxIter;
     int p_minIter;
 
-    bool p_paused = false;
+    std::atomic_bool p_paused = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -127,7 +128,7 @@ private:
     void UpdatePixels( float time );
 
     std::unique_ptr<nhNebulabrot> _fractal;
-    std::vector<std::thread> _paintJobs;
+    std::vector<std::thread>      _paintJobs;
 };
 
 // -----------------------------------------------------------------------------

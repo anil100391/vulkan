@@ -81,6 +81,53 @@ bool nhImage::Paint( void )
     return false;
 }
 
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+std::vector<unsigned char> nhNebulabrot::GetHeatPlot() const
+{
+    auto hitPixels = p_colorData;
+
+    uint32_t maxHits = 0u;
+    for ( size_t ii = 0; ii < hitPixels.size() / 4; ++ii )
+    {
+        uint8_t *pixel = &hitPixels[4 * ii];
+        uint32_t hitCount = *reinterpret_cast<uint32_t *>(pixel);
+        if ( hitCount > maxHits )
+        {
+            maxHits = hitCount;
+        }
+    }
+
+    if ( maxHits != 0 )
+    {
+        for ( size_t ii = 0; ii < hitPixels.size() / 4; ++ii )
+        {
+            uint8_t *pixel = &hitPixels[4 * ii];
+            uint32_t hitCount = *reinterpret_cast<uint32_t *>(pixel);
+            if ( hitCount == 0 )
+            {
+                pixel[3] = 255;
+                continue;
+            }
+            float density = 1.0f * hitCount / maxHits;
+            density = std::pow( density, 0.85f );
+            // density *= 2.0f;
+            density = std::clamp( density, 0.0f, 1.0f );
+            uint8_t intensity = static_cast<uint8_t>(255 * density);
+
+            if ( intensity != 0 )
+            {
+                pixel[0] = intensity;
+                pixel[1] = intensity;
+                pixel[2] = std::pow( (intensity / 255.0f), 0.85f ) * 255;
+            }
+            pixel[3] = 255;
+        }
+    }
+
+    return hitPixels;
+}
+
 // -------------------------------------------------------------------------- //
 // -------------------------------------------------------------------------- //
 int nhNebulabrot::IterationsToGetKnocked( int row, int col ) const
@@ -160,12 +207,10 @@ bool nhNebulabrot::Paint( void )
     clock_t seed = clock();
     srand( seed );
 
-    std::ofstream outfile( "nebulabrot_points.txt" );
-    while ( true && !p_paused )
+    while ( !p_paused )
     {
         double cx = 0, cy = 0;
         GetAStartingPoint( cx, cy );
-        outfile << cx << "\t" << cy << "\n";
 
         // Iteration of 0 under f(z) = z^2 + c //
         int count = 0;
@@ -215,8 +260,8 @@ FractalsApp::FractalsApp()
     auto width = wp.width;
     auto height = wp.height;
 
-    int minIter = 25;
-    int maxIter = 1000;
+    int minIter = 50;
+    int maxIter = 10000;
     _fractal = std::make_unique<nhNebulabrot>( -2.0f, 1.0f, -1.0f, 1.0f, width, height, maxIter, minIter );
 
     StartPainting();
@@ -243,7 +288,14 @@ void FractalsApp::StartPainting()
 // -----------------------------------------------------------------------------
 void FractalsApp::PausePainting()
 {
+    using namespace std::chrono_literals;
+
     _fractal->PausePaint( true );
+
+    // wait for paint job to finish
+    std::this_thread::sleep_for( 1ms );
+
+    // kill the thread
     _paintJobs.clear();
 }
 
@@ -277,48 +329,10 @@ void FractalsApp::UpdatePixels( float time )
 
     PausePainting();
 
-    auto p_colorData = _fractal->Pixels();
-
-    uint32_t maxHits = 0;
-    for ( size_t ii = 0; ii < p_colorData.size() / 4; ++ii )
-    {
-        uint8_t *pixel = &p_colorData[4 * ii];
-        uint32_t hitCount = *reinterpret_cast<uint32_t *>(pixel);
-        if ( hitCount > maxHits )
-        {
-            maxHits = hitCount;
-        }
-    }
-
-    if ( maxHits != 0 )
-    {
-        for ( size_t ii = 0; ii < p_colorData.size() / 4; ++ii )
-        {
-            uint8_t *pixel = &p_colorData[4 * ii];
-            uint32_t hitCount = *reinterpret_cast<uint32_t *>(pixel);
-            if ( hitCount == 0 )
-            {
-                pixel[3] = 255;
-                continue;
-            }
-            float density = 1.0f * hitCount / maxHits;
-            density = std::pow( density, 0.85f );
-            // density *= 2.0f;
-            density = std::clamp( density, 0.0f, 1.0f );
-            uint8_t intensity = static_cast<uint8_t>(255 * density);
-
-            if ( intensity != 0 )
-            {
-                pixel[0] = intensity;
-                pixel[1] = intensity;
-                pixel[2] = intensity;
-            }
-            pixel[3] = 255;
-        }
-    }
+    auto colorData = _fractal->GetHeatPlot();
 
     cleanupImageTexture();
-    createTextureImage( p_colorData, width, height );
+    createTextureImage( colorData, width, height );
     createTextureImageView();
     updateDescriptorSets();
     vkFreeCommandBuffers( _device, _commandPool, static_cast<uint32_t>(_commandBuffers.size()), _commandBuffers.data() );
