@@ -48,6 +48,8 @@ protected:
     VkPresentModeKHR            chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes );
     VkExtent2D                  chooseSwapExtent( const VkSurfaceCapabilitiesKHR &capabilities );
     bool                        checkDeviceExtensionSupport( VkPhysicalDevice device );
+    bool                        checkValidationLayerSupport();
+    std::vector<const char *>   getRequiredExtensions();
     bool                        isDeviceSuitable( VkPhysicalDevice device );
     QueueFamilyIndices          findQueueFamilies( VkPhysicalDevice device );
     uint32_t                    findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -135,6 +137,8 @@ protected:
     std::vector<VkFence>            _inFlightFences;
     std::vector<VkFence>            _imagesInFlight;
     size_t                          _currentFrame = 0;
+
+    VkDebugUtilsMessengerEXT        _debugMessenger;
 };
 
 // -----------------------------------------------------------------------------
